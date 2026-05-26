@@ -6,9 +6,29 @@ import { AudioStore } from "open-tts";
 import { createTTSActions } from "open-tts";
 import { AudioVisualizer } from "./AudioVisualizer";
 import { IconButton, Spinner } from "./IconButton";
+import { ToolbarOverflowMenu } from "./ToolbarOverflowMenu";
+import type { ToolbarOverflowMenuItem } from "./ToolbarOverflowMenu";
 import { TTSErrorInfo } from "open-tts";
 import { useTooltip } from "../util/TooltipContext";
 import { AlertCircle } from "lucide-react";
+
+type Availability = boolean | (() => boolean);
+type ExportProgress = { completed: number; total: number };
+
+export interface PlayerViewProps {
+  player: AudioStore;
+  settings: TTSPluginSettingsStore;
+  sink: AudioSink;
+  shouldShow: boolean | (() => boolean);
+  isMobilePhone: boolean | (() => boolean);
+  audioElement?: HTMLAudioElement;
+  onOpenSettings: () => void;
+  onPlaySelection: () => void;
+  onExportSelectionAudio?: () => void;
+  canExportSelectionAudio?: Availability;
+  onSaveDocumentAudio?: () => void;
+  canSaveDocumentAudio?: Availability;
+}
 
 export const PlayerView = observer(
   ({
@@ -20,16 +40,11 @@ export const PlayerView = observer(
     audioElement,
     onOpenSettings,
     onPlaySelection,
-  }: {
-    player: AudioStore;
-    settings: TTSPluginSettingsStore;
-    sink: AudioSink;
-    shouldShow: boolean | (() => boolean);
-    isMobilePhone: boolean | (() => boolean);
-    audioElement?: HTMLAudioElement;
-    onOpenSettings: () => void;
-    onPlaySelection: () => void;
-  }): React.ReactNode => {
+    onExportSelectionAudio,
+    canExportSelectionAudio,
+    onSaveDocumentAudio,
+    canSaveDocumentAudio,
+  }: PlayerViewProps): React.ReactNode => {
     // Evaluate getters inside observer body so MobX tracks dependencies
     const isMobile =
       typeof isMobilePhone === "function" ? isMobilePhone() : isMobilePhone;
@@ -44,61 +59,73 @@ export const PlayerView = observer(
         }),
       [player, settings, onPlaySelection],
     );
+    const exportMenuItems = createExportMenuItems({
+      player,
+      onExportSelectionAudio,
+      canExportSelectionAudio,
+      onSaveDocumentAudio,
+      canSaveDocumentAudio,
+    });
+    const exportInProgress = !!player.exportProgress;
 
-    if (isMobile || !visible) {
+    if (isMobile || (!visible && !exportInProgress)) {
       return null;
     }
     return (
       <div className="tts-toolbar-player">
-        <div className="tts-toolbar-player-button-group">
-          <IconButton
-            icon="play"
-            tooltip="Play selection"
-            onClick={() => actions.playSelection()}
-          />
-        </div>
-        <div className="tts-toolbar-player-button-group">
-          <IconButton
-            icon="skip-back"
-            tooltip="Previous"
-            onClick={() => actions.previous()}
-            disabled={!player.activeText}
-          />
-
-          {sink.trackStatus === "playing" ? (
+        {visible && (
+          <div className="tts-toolbar-player-button-group">
             <IconButton
-              key="pause"
-              icon="pause"
-              tooltip="Pause"
-              onClick={() => actions.playPause()}
+              icon="play"
+              tooltip="Play selection"
+              onClick={() => actions.playSelection()}
             />
-          ) : (
+          </div>
+        )}
+        {visible && (
+          <div className="tts-toolbar-player-button-group">
             <IconButton
-              key="play"
-              icon="step-forward"
-              tooltip="Resume"
-              onClick={() => actions.playPause()}
+              icon="skip-back"
+              tooltip="Previous"
+              onClick={() => actions.previous()}
               disabled={!player.activeText}
             />
-          )}
-          <IconButton
-            icon="skip-forward"
-            tooltip="Next"
-            onClick={() => actions.next()}
-            disabled={!player.activeText}
-          />
-          <IconButton
-            icon={player.autoScrollEnabled ? "eye" : "eye-off"}
-            tooltip={
-              player.autoScrollEnabled
-                ? "Autoscroll enabled (click to disable)"
-                : "Autoscroll disabled (click to enable and scroll to current position)"
-            }
-            onClick={() => actions.toggleAutoscroll()}
-            highlight={player.autoScrollEnabled}
-          />
-          <EditPlaybackSpeedButton settings={settings} />
-        </div>
+
+            {sink.trackStatus === "playing" ? (
+              <IconButton
+                key="pause"
+                icon="pause"
+                tooltip="Pause"
+                onClick={() => actions.playPause()}
+              />
+            ) : (
+              <IconButton
+                key="play"
+                icon="step-forward"
+                tooltip="Resume"
+                onClick={() => actions.playPause()}
+                disabled={!player.activeText}
+              />
+            )}
+            <IconButton
+              icon="skip-forward"
+              tooltip="Next"
+              onClick={() => actions.next()}
+              disabled={!player.activeText}
+            />
+            <IconButton
+              icon={player.autoScrollEnabled ? "eye" : "eye-off"}
+              tooltip={
+                player.autoScrollEnabled
+                  ? "Autoscroll enabled (click to disable)"
+                  : "Autoscroll disabled (click to enable and scroll to current position)"
+              }
+              onClick={() => actions.toggleAutoscroll()}
+              highlight={player.autoScrollEnabled}
+            />
+            <EditPlaybackSpeedButton settings={settings} />
+          </div>
+        )}
         <div className="tts-audio-status-container">
           <AudioStatusInfoContents
             audioElement={audioElement}
@@ -108,18 +135,79 @@ export const PlayerView = observer(
           />
         </div>
         <div className="tts-toolbar-player-button-group">
-          {player.activeText && (
+          {player.exportProgress && (
+            <button
+              type="button"
+              className="tts-export-cancel-button"
+              onClick={() => player.cancelExport()}
+              title="Cancel audio export"
+            >
+              Cancel
+            </button>
+          )}
+          {visible && player.activeText && (
             <IconButton
               tooltip="Cancel playback"
               icon="x"
               onClick={() => actions.stop()}
             />
           )}
+          {visible && exportMenuItems.length > 0 && (
+            <ToolbarOverflowMenu items={exportMenuItems} />
+          )}
         </div>
       </div>
     );
   },
 );
+
+function createExportMenuItems({
+  player,
+  onExportSelectionAudio,
+  canExportSelectionAudio,
+  onSaveDocumentAudio,
+  canSaveDocumentAudio,
+}: {
+  player: AudioStore;
+  onExportSelectionAudio?: () => void;
+  canExportSelectionAudio?: Availability;
+  onSaveDocumentAudio?: () => void;
+  canSaveDocumentAudio?: Availability;
+}): ToolbarOverflowMenuItem[] {
+  const items: ToolbarOverflowMenuItem[] = [];
+
+  if (onExportSelectionAudio) {
+    items.push({
+      id: "export-selection-audio",
+      label: "Export selection as audio...",
+      disabled: () =>
+        !!player.exportProgress || !isAvailable(canExportSelectionAudio, true),
+      onSelect: onExportSelectionAudio,
+    });
+  }
+
+  if (onSaveDocumentAudio) {
+    items.push({
+      id: "save-document-audio",
+      label: "Save document as audio...",
+      disabled: () =>
+        !!player.exportProgress || !isAvailable(canSaveDocumentAudio, true),
+      onSelect: onSaveDocumentAudio,
+    });
+  }
+
+  return items;
+}
+
+function isAvailable(
+  value: Availability | undefined,
+  fallback: boolean,
+): boolean {
+  if (value === undefined) {
+    return fallback;
+  }
+  return typeof value === "function" ? value() : value;
+}
 
 const EditPlaybackSpeedButton: React.FC<{
   settings: TTSPluginSettingsStore;
@@ -204,12 +292,37 @@ const EditPlaybackSpeedButton: React.FC<{
   );
 });
 
+const ExportStatus: React.FC<{
+  progress: ExportProgress;
+}> = ({ progress }) => {
+  return (
+    <span className="tts-export-status" role="status">
+      {formatExportProgressLabel(progress)}
+    </span>
+  );
+};
+
+function formatExportProgressLabel(progress: ExportProgress): string {
+  if (progress.total <= 1) {
+    return "Saving document audio...";
+  }
+
+  const currentSection =
+    progress.completed >= progress.total
+      ? progress.total
+      : progress.completed + 1;
+  return `Saving document audio... ${currentSection} of ${progress.total}`;
+}
+
 const AudioStatusInfoContents: React.FC<{
   audioElement?: HTMLAudioElement;
   player: AudioStore;
   settings: TTSPluginSettingsStore;
   onOpenSettings: () => void;
 }> = observer(({ audioElement, player, settings, onOpenSettings }) => {
+  if (player.exportProgress) {
+    return <ExportStatus progress={player.exportProgress} />;
+  }
   if (settings.apiKeyValid === false) {
     return (
       // Extra span container to absorb the align-items: stretch from the container
