@@ -24,6 +24,7 @@ import { HumeSettings } from "./settings/providers/provider-hume";
 import { OpenAISettings } from "./settings/providers/provider-openai";
 import { OpenAICompatibleSettings } from "./settings/providers/provider-openai-like";
 import { MinimaxSettings } from "./settings/providers/provider-minimax";
+import { MimoSettings } from "./settings/providers/provider-mimo";
 import { InworldSettings } from "./settings/providers/provider-inworld";
 import { PollySettings } from "./settings/providers/provider-polly";
 import { FishSettings } from "./settings/providers/provider-fish";
@@ -38,6 +39,7 @@ const providerSettingsViews: Record<
   hume: HumeSettings,
   inworld: InworldSettings,
   minimax: MinimaxSettings,
+  mimo: MimoSettings,
   fish: FishSettings,
   openai: OpenAISettings,
   openaicompat: OpenAICompatibleSettings,
@@ -145,6 +147,7 @@ const labels: Record<ModelProvider, string> = {
   gemini: "Google Gemini",
   hume: "Hume",
   minimax: "MiniMax",
+  mimo: "Mimo",
   fish: "Fish Audio",
   inworld: "Inworld",
   polly: "AWS Polly",

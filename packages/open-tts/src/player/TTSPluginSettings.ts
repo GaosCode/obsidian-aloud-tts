@@ -3,6 +3,7 @@ import { TTSModelOptions } from "../models/tts-model";
 import { debounce } from "../util/misc";
 import { hashStrings } from "../util/Minhash";
 import { OPENAI_API_URL } from "../models/openai";
+import type { MimoApiEndpoint } from "../models/mimo";
 import { REGISTRY } from "../models/registry";
 export { MARKETING_NAME, MARKETING_NAME_LONG } from "../marketing";
 
@@ -25,6 +26,7 @@ export type TTSPluginSettings = {
   ElevenLabsModelConfig &
   AzureModelConfig &
   MinimaxModelConfig &
+  MimoModelConfig &
   FishModelConfig &
   InworldModelConfig &
   PollyModelConfig);
@@ -113,6 +115,17 @@ export interface AzureModelConfig {
   azure_outputFormat: string;
 }
 
+export interface MimoModelConfig {
+  /** the API key to use */
+  mimo_apiKey: string;
+  /** which Mimo API endpoint to use */
+  mimo_apiEndpoint: MimoApiEndpoint;
+  /** the preset voice to use */
+  mimo_ttsVoice: string;
+  /** optional natural-language style instructions sent in the user message */
+  mimo_ttsInstructions?: string;
+}
+
 export interface MinimaxModelConfig {
   /** the API key to use */
   minimax_apiKey: string;
@@ -199,6 +212,7 @@ export const modelProviders = [
   "gemini",
   "hume",
   "minimax",
+  "mimo",
   "fish",
   "inworld",
   "polly",
@@ -254,6 +268,12 @@ export const DEFAULT_SETTINGS: TTSPluginSettings = {
   minimax_ttsModel: "speech-2.6-turbo",
   minimax_ttsVoice: "English_expressive_narrator",
   minimax_useChinaEndpoint: false,
+
+  // mimo
+  mimo_apiKey: "",
+  mimo_apiEndpoint: "standard" as MimoApiEndpoint,
+  mimo_ttsVoice: "mimo_default",
+  mimo_ttsInstructions: undefined,
 
   // fish
   fish_apiKey: "",

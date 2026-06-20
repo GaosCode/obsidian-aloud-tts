@@ -6,6 +6,7 @@ export * from "./models/gemini";
 export * from "./models/hume";
 export * from "./models/inworld";
 export * from "./models/minimax";
+export * from "./models/mimo";
 export * from "./models/openai";
 export * from "./models/openai-like";
 export * from "./models/polly";

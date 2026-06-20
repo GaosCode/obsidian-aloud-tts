@@ -7,6 +7,7 @@ import { openAILikeTextToSpeech } from "./openai-like";
 import { elevenLabsTextToSpeech } from "./elevenlabs";
 import { azureTextToSpeech } from "./azure";
 import { minimaxTextToSpeech } from "./minimax";
+import { mimoTextToSpeech } from "./mimo";
 import { inworldTextToSpeech } from "./inworld";
 import { pollyTextToSpeech } from "./polly";
 import { fishTextToSpeech } from "./fish";
@@ -19,6 +20,7 @@ export const REGISTRY: Record<ModelProvider, TTSModel> = {
   elevenlabs: elevenLabsTextToSpeech,
   azure: azureTextToSpeech,
   minimax: minimaxTextToSpeech,
+  mimo: mimoTextToSpeech,
   fish: fishTextToSpeech,
   inworld: inworldTextToSpeech,
   polly: pollyTextToSpeech,
